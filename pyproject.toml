@@ -1,0 +1,45 @@
+[build-system]
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
+
+[project]
+name = "artemis-provenance-sdk"
+dynamic = ["version"]
+description = "Thin client for the Artemis Provenance data plane — mark and verify AI-generated media (EU AI Act Article 50(2))."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.9"
+keywords = ["provenance", "c2pa", "watermark", "ai-act", "content-credentials"]
+authors = [{ name = "Star48" }]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Typing :: Typed",
+]
+dependencies = [
+    "httpx>=0.27",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.urls]
+Homepage = "https://github.com/Star-48/artemis-provenance-sdk-python"
+Repository = "https://github.com/Star-48/artemis-provenance-sdk-python.git"
+Issues = "https://github.com/Star-48/artemis-provenance-sdk-python/issues"
+
+[tool.hatch.version]
+path = "src/artemis_provenance_sdk/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/artemis_provenance_sdk"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

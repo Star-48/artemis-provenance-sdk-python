@@ -1,0 +1,41 @@
+name: Publish to PyPI
+# Publishes when a GitHub Release is published. Uses PyPI Trusted Publishing
+# (OIDC) — no PYPI_TOKEN secret. One-time setup (see SETUP.md): configure the
+# trusted publisher on PyPI (owner Star-48, repo artemis-provenance-sdk-python,
+# workflow publish.yml, environment pypi) and create the `pypi` environment in
+# this repo's settings.
+#
+# Release flow: bump __version__ in src/artemis_provenance_sdk/__init__.py,
+# merge to main, then create a GitHub Release with tag v<version>. The tag is
+# checked against the package version so a stale version can never ship.
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write # PyPI Trusted Publishing (OIDC)
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install
+        run: pip install build ".[dev]"
+      - name: Test
+        run: pytest -q
+      - name: Check release tag matches package version
+        run: |
+          pkg="$(python -c 'import artemis_provenance_sdk as m; print(m.__version__)')"
+          tag="${GITHUB_REF_NAME#v}"
+          if [ "$pkg" != "$tag" ]; then
+            echo "::error::Release tag v${tag} does not match package version ${pkg}. Bump __version__ first."
+            exit 1
+          fi
+      - name: Build sdist + wheel
+        run: python -m build
+      - name: Publish to PyPI (OIDC)
+        uses: pypa/gh-action-pypi-publish@release/v1
