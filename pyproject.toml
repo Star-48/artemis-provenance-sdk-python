@@ -43,3 +43,12 @@ packages = ["src/artemis_provenance_sdk"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.semantic_release]
+# Single source of truth for the version; pyproject reads it dynamically.
+version_variables = ["src/artemis_provenance_sdk/__init__.py:__version__"]
+commit_message = "chore(release): {version} [skip ci]"
+tag_format = "v{version}"
+# Stay in 0.x while the SDK is beta (first release 0.1.0, not 1.0.0).
+allow_zero_version = true
+# Building happens in the publish job (publish.yml); PSR only versions/tags.

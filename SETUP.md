@@ -4,9 +4,10 @@ How this package gets to PyPI so customers can `pip install artemis-provenance-s
 It mirrors the Node SDK's tokenless flow: GitHub Actions + **Trusted Publishing
 (OIDC)** — no long-lived PyPI API token is stored anywhere.
 
-The Node SDK publishes via semantic-release on every push to `main`; the Python
-SDK publishes on a **GitHub Release** (the flow PyPI recommends for trusted
-publishing). Same trust model, slightly more deliberate trigger.
+Like the Node SDK, releases are **fully automated**: push Conventional Commits
+to `main` and [python-semantic-release](https://python-semantic-release.readthedocs.io/)
+does the rest — version bump, changelog, tag, GitHub Release, PyPI publish. No
+manual release step.
 
 ## One-time setup (manual, ~10 minutes)
 
@@ -42,13 +43,22 @@ lets PyPI verify the job's OIDC identity against the publisher configured above.
 
 ## How a release happens (every time)
 
-1. Bump `__version__` in `src/artemis_provenance_sdk/__init__.py`
-   (pyproject reads it dynamically — single source of truth) and merge to `main`.
-2. GitHub → Releases → **Draft a new release** → tag `v<version>` (e.g.
-   `v0.1.0`) → Publish release.
-3. The `Publish to PyPI` workflow runs: tests → checks the tag matches
-   `__version__` (a mismatch fails the job, so a stale version can never ship)
-   → `python -m build` → `pypa/gh-action-pypi-publish` uploads via OIDC.
+Just push (or merge) **Conventional Commits** to `main`. The `Release & publish`
+workflow then:
+
+1. runs the tests;
+2. runs **python-semantic-release**, which parses the commits since the last
+   tag and decides the next version — `feat:` → minor, `fix:`/`perf:` → patch,
+   `feat!:`/`BREAKING CHANGE:` → major; `docs:`/`chore:`/`test:`/`refactor:` →
+   **no release** (the workflow ends there);
+3. bumps `__version__` in `src/artemis_provenance_sdk/__init__.py` (the single
+   source of truth — never bump it by hand), updates `CHANGELOG.md`, commits
+   with `[skip ci]`, tags `v<version>` and creates the GitHub Release;
+4. builds sdist + wheel from the tag and uploads to PyPI via OIDC
+   (`pypa/gh-action-pypi-publish`), gated by the `pypi` environment.
+
+So: `git commit -m "fix: handle 503 retry"` + push = a patch release on PyPI a
+few minutes later. Commit discipline is the release process.
 
 ## What users do
 

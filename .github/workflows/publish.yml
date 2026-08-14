@@ -1,41 +1,74 @@
-name: Publish to PyPI
-# Publishes when a GitHub Release is published. Uses PyPI Trusted Publishing
-# (OIDC) — no PYPI_TOKEN secret. One-time setup (see SETUP.md): configure the
-# trusted publisher on PyPI (owner Star-48, repo artemis-provenance-sdk-python,
-# workflow publish.yml, environment pypi) and create the `pypi` environment in
-# this repo's settings.
+name: Release & publish
+# Fully automated releases, mirroring the Node SDK's semantic-release flow:
+# push Conventional Commits to main — python-semantic-release computes the next
+# version (feat → minor, fix/perf → patch, feat!/BREAKING CHANGE → major; docs/
+# chore/test → no release), bumps __version__, writes CHANGELOG.md, tags
+# v<version> and creates the GitHub Release; the publish job then uploads to
+# PyPI via Trusted Publishing (OIDC) — no PYPI_TOKEN secret anywhere.
 #
-# Release flow: bump __version__ in src/artemis_provenance_sdk/__init__.py,
-# merge to main, then create a GitHub Release with tag v<version>. The tag is
-# checked against the package version so a stale version can never ship.
+# One-time setup (see SETUP.md): trusted publisher on PyPI (owner Star-48,
+# repo artemis-provenance-sdk-python, workflow publish.yml, environment pypi)
+# and the `pypi` environment in this repo's settings.
+#
+# NOTE: this file must stay named publish.yml — the PyPI trusted publisher
+# references the workflow filename.
 on:
-  release:
-    types: [published]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 jobs:
-  publish:
+  test:
     runs-on: ubuntu-latest
-    environment: pypi
-    permissions:
-      id-token: write # PyPI Trusted Publishing (OIDC)
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
       - name: Install
-        run: pip install build ".[dev]"
+        run: pip install ".[dev]"
       - name: Test
         run: pytest -q
-      - name: Check release tag matches package version
-        run: |
-          pkg="$(python -c 'import artemis_provenance_sdk as m; print(m.__version__)')"
-          tag="${GITHUB_REF_NAME#v}"
-          if [ "$pkg" != "$tag" ]; then
-            echo "::error::Release tag v${tag} does not match package version ${pkg}. Bump __version__ first."
-            exit 1
-          fi
+
+  release:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # push the version commit + tag, create the GitHub Release
+    outputs:
+      released: ${{ steps.semrel.outputs.released }}
+      tag: ${{ steps.semrel.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Semantic release (version, changelog, tag, GitHub Release)
+        id: semrel
+        uses: python-semantic-release/python-semantic-release@v10.6.1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+  publish:
+    needs: release
+    if: needs.release.outputs.released == 'true'
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write # PyPI Trusted Publishing (OIDC)
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release.outputs.tag }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - name: Build sdist + wheel
-        run: python -m build
+        run: |
+          pip install build
+          python -m build
       - name: Publish to PyPI (OIDC)
         uses: pypa/gh-action-pypi-publish@release/v1
