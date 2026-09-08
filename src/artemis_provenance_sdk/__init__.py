@@ -2,8 +2,27 @@
 logic; it serializes calls to the customer-deployed data plane (spec §9).
 """
 
-from .client import Client, MarkedAsset, MarkingUnavailableError, VerifyResult
+from .client import (
+    TEXT_VERDICTS,
+    Client,
+    MarkedAsset,
+    MarkedText,
+    MarkingFailedError,
+    MarkingUnavailableError,
+    VerifyResult,
+    VerifyTextResult,
+)
 
 __version__ = "0.1.0"
 
-__all__ = ["Client", "MarkedAsset", "MarkingUnavailableError", "VerifyResult", "__version__"]
+__all__ = [
+    "Client",
+    "MarkedAsset",
+    "MarkedText",
+    "MarkingFailedError",
+    "MarkingUnavailableError",
+    "TEXT_VERDICTS",
+    "VerifyResult",
+    "VerifyTextResult",
+    "__version__",
+]
